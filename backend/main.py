@@ -1,29 +1,35 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import (HTTPException, 
+                     UploadFile, 
+                     FastAPI, 
+                     File)
 from pydantic import BaseModel
+from llama_cpp import Llama
 from typing import Dict
 import random
 import string
+import uuid
+
 
 app = FastAPI()
 
+llm = Llama(model_path="models/Meta-Llama-3-8B.Q3_K_L.gguf", verbose=False)
 
-class TextData(BaseModel):
-    """Модель данных для передачи текстовой информации."""
-    text: str
+class MessageRequest(BaseModel):
+    message: str
 
-@app.post("/process-text")
-async def process_text(data: TextData) -> Dict[str, str]:
-    """
-    Эндпоинт для обработки текстовых данных.
-    
-    Генерирует случайный ответ и возвращает его вместе с переданным текстом.
-    """
-    # TODO: insert real text processing
+class MessageResponse(BaseModel):
+    response: str
 
-    random_text = ''.join(random.choices(string.ascii_letters + string.digits, k=20))
-    processed_text = f"User text: {data.text}\n Answer: {random_text}"
-    
-    return {"processed_text": processed_text}
+@app.post("/process-text", response_model=MessageResponse)
+async def send_message(request: MessageRequest) -> MessageResponse:
+    try:
+        prompt = f"Q: {request.message} A: "
+        response = llm(prompt, max_tokens=256, stop=["Q:", "\n"])
+        print(response)
+        answer_text = response['choices'][0]['text']
+        return MessageResponse(response=answer_text.strip())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/process-file")
 async def upload_file(file: UploadFile = File(...)) -> Dict[str, str]:
