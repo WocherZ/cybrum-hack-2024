@@ -1,53 +1,73 @@
-import streamlit as st
-import requests
 import uuid
+import requests
+import streamlit as st
+from typing import Dict
+from pydantic import BaseModel
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from config import API_URL
 
-def create_new_chat():
+
+def create_chat() -> None:
     """
     Create a new chat and switch to it.
     """
     chat_id = str(uuid.uuid4())
+    num_chats = len(st.session_state["chats"])
     st.session_state["chats"][chat_id] = {
-        "title": f"Чат {len(st.session_state['chats']) + 1}",
+        "title": f"Новый чат {num_chats + 1 if num_chats > 0 else ''}",
         "messages": []
     }
     st.session_state["current_chat_id"] = chat_id  # Switch to the new chat
 
-def add_message(user_message):
+def handle_input(content: str,
+                 uploaded_file: UploadedFile = None, 
+                 selected_model: str = None,
+                 input_type: str = "message") -> Dict:
     """
     Add a message to the current chat.
+
+    Args:
+        content (str): The content of the message.
+        uploaded_file (st.UploadedFile, optional): The uploaded file. Defaults to None.
+        selected_model (str, optional): The selected model. Defaults to None.
+        input_type (str, optional): The input type. Defaults to "message".
+
+    Returns:
+        dict: The response from the LLM in the format {"role": ..., "content": ...}.
     """
     chat_id = st.session_state["current_chat_id"]
     if chat_id:
-        response = requests.post(f"{API_URL}/process-text/",
-                                 json={"message": user_message})
+        if input_type == "message" and content:
+            response = requests.post(f"{API_URL}/process-text/", 
+                                     json={"content": content,
+                                           "model": selected_model})
+            
+        elif input_type == "file" and uploaded_file:
+
+            file = {"file": (uploaded_file.name, 
+                             uploaded_file.getvalue(), 
+                             uploaded_file.type)}
+            
+            data = {"content": content,
+                    "model": selected_model}
+
+            response = requests.post(f"{API_URL}/process-file/", 
+                                     files=file,
+                                     data=data)
+            
+        else:
+            return {"role": "assistant",
+                    "content": "Ошибка: не передан контент или файл."}
         
         if response.status_code == 200:
-            answer_text = response.json()["response"]
-            st.session_state["chats"][chat_id]["messages"].append({
-                "user": user_message,
-                "response": answer_text
-            })
-            st.session_state["clear_input_flag"] = True
+            response_text = response.json().get("response", 
+                                                "Нет ответа от модели.")
+            return {"role": "model", 
+                    "content": response_text}
         else:
-            st.write("Ошибка на сервере: невозможно получить ответ")
+            error_message = response.json().get("error", 
+                                                "Неизвестная ошибка.")
+            return {"role": "assistant",
+                    "content": f"Ошибка: {error_message}"}
 
-def add_file(file):
-    """
-    Add a file to the current chat.
-    """
-    chat_id = st.session_state["current_chat_id"]
-    if chat_id:
-        response = requests.post(f"{API_URL}/process-file/",
-                                 files={"file": file})
-        print("Resp", response)
-        if response.status_code == 200:
-            response_text = response.json()["response"]
-            st.session_state["chats"][chat_id]["messages"].append({
-                "user": f"Загружен файл: {file.name}",
-                "response": response_text
-            })
-        else:
-            st.write("Ошибка при обработке файла")
