@@ -1,7 +1,9 @@
 from fastapi import (HTTPException, 
                      UploadFile, 
                      FastAPI, 
+                     Form,
                      File)
+
 from pydantic import BaseModel
 from llama_cpp import Llama
 from typing import Dict, Optional
@@ -9,10 +11,11 @@ from typing import Dict, Optional
 
 app = FastAPI()
 
-llm = Llama(model_path="models/Meta-Llama-3-8B.Q3_K_L.gguf", verbose=False)
+# llm = Llama(model_path="models/Meta-Llama-3-8B.Q3_K_L.gguf", verbose=False)
+llm = Llama(model_path="models/Vikhr-Nemo-12B-Instruct-R-21-09-24.Q4_0.gguf", verbose=False)
 
 class MessageRequest(BaseModel):
-    message: str
+    content: str
 
 class MessageResponse(BaseModel):
     response: str
@@ -27,10 +30,11 @@ async def send_message(request: MessageRequest) -> MessageResponse:
     """
     Endpoint to process text input and return a response.
     """
+    print(request.content)
     try:
-        prompt = f"Q: {request.message} A: "
+        prompt = f"Q: {request.content} A: "
         response = llm(prompt, max_tokens=256, stop=["Q:", "\n"])
-        # print(response)
+        print(response)
         answer_text = response['choices'][0]['text']
 
         return MessageResponse(response=answer_text.strip())
@@ -38,21 +42,23 @@ async def send_message(request: MessageRequest) -> MessageResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/process-file")
-async def upload_file(file: UploadFile = File(...)) -> FileResponse:
+async def upload_file(file: UploadFile = File(...),
+                      content: str = Form(...), 
+                      model: str = Form(...)) -> FileResponse:
     """
     Endpoint to upload and process a file, returning metadata and sample content.
     Reads the uploaded file, generates random data, and returns metadata and a preview.
     """
     try:
-        content = await file.read()
-        content_text = content.decode("utf-8", errors="ignore")
+        file_content = await file.read()
+        file_text = content.decode("utf-8", errors="ignore")
         
-        prompt = f"Q: {content_text[:500]} A: "
+        prompt = f"{content}: {file_text[:500]} A: "
         response = llm(prompt, max_tokens=512, stop=["Q:", "\n"])
         # print(response)
         answer_text = response['choices'][0]['text'].strip()
 
-        content_preview = content_text[:100] if content_text else None
+        content_preview = file_text[:100] if file_text else None
 
         return FileResponse(filename=file.filename,
                             content_preview=content_preview,
