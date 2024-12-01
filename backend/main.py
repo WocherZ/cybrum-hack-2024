@@ -9,10 +9,6 @@ from llama_cpp import Llama
 from typing import Dict, Optional
 import re
 
-from context import (find_similar_texts, 
-                     remove_non_printable)
-
-
 app = FastAPI()
 
 # llm = Llama(model_path="models/Meta-Llama-3-8B.Q3_K_L.gguf", verbose=False)
@@ -36,17 +32,11 @@ async def send_message(request: MessageRequest) -> MessageResponse:
     """
     print(request.content)
     try:
-        additional_context = find_similar_texts(request.content)
-        additional_context = remove_non_printable(additional_context)
-        # additional_context = ""
-        # print(additional_context)
-
-        # prompt = f"Q: {request.content} A: "
-        prompt = f"Q: {additional_context}. {request.content}. A: "
+        prompt = f"Q: {request.content} A: "
         # print(prompt)
 
         response = llm(prompt, max_tokens=512, stop=["Q:", "\n"])
-        # print(response)
+        print(response)
 
         answer_text = response['choices'][0]['text']
 
