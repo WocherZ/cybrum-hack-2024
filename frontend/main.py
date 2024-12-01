@@ -3,7 +3,8 @@ import requests
 import streamlit as st
 
 from config import API_URL, MODELS
-from components.chat_functions import (create_chat, 
+from components.chat_functions import (display_text_incrementally,
+                                       create_chat, 
                                        handle_input)
 
 # Initialize session states
@@ -66,7 +67,7 @@ if st.session_state["current_chat_id"]:
             # Show title
             st.title(f"💬 {chat['title']}")
     
-    with col2:    
+    with col2:
         if st.button("✏️", 
                      key="edit_title", 
                      help="Редактировать название чата",
@@ -101,7 +102,11 @@ if st.session_state["current_chat_id"]:
         # Extract and display assistant's response
         msg = response["content"]
         st.session_state.messages.append({"role": "assistant", "content": msg})
-        st.chat_message("assistant").write(msg)
+        
+        # Display response
+        # st.chat_message("assistant").write(msg)
+        assistant_message_container = st.chat_message("assistant").empty()
+        display_text_incrementally(assistant_message_container, msg)
     
     st.divider()
     with st.expander("📂 Загрузить файл", expanded=False):
@@ -142,4 +147,8 @@ if st.session_state["current_chat_id"]:
                 msg = response["content"]
                 if "Ошибка" not in msg:
                     st.session_state.messages.append({"role": "assistant", "content": msg})
-                    st.chat_message("assistant").write(msg)
+                    
+                    # Display response
+                    # st.chat_message("assistant").write(msg)
+                    assistant_message_container = st.chat_message("assistant").empty()
+                    display_text_incrementally(assistant_message_container, msg)
