@@ -7,6 +7,10 @@ from fastapi import (HTTPException,
 from pydantic import BaseModel
 from llama_cpp import Llama
 from typing import Dict, Optional
+import re
+
+from context import (find_similar_texts, 
+                     remove_non_printable)
 
 
 app = FastAPI()
@@ -32,9 +36,18 @@ async def send_message(request: MessageRequest) -> MessageResponse:
     """
     print(request.content)
     try:
-        prompt = f"Q: {request.content} A: "
-        response = llm(prompt, max_tokens=256, stop=["Q:", "\n"])
-        print(response)
+        additional_context = find_similar_texts(request.content)
+        additional_context = remove_non_printable(additional_context)
+        # additional_context = ""
+        # print(additional_context)
+
+        # prompt = f"Q: {request.content} A: "
+        prompt = f"Q: {additional_context}. {request.content}. A: "
+        # print(prompt)
+
+        response = llm(prompt, max_tokens=512, stop=["Q:", "\n"])
+        # print(response)
+
         answer_text = response['choices'][0]['text']
 
         return MessageResponse(response=answer_text.strip())
