@@ -1,4 +1,5 @@
 import uuid
+import time
 import requests
 import streamlit as st
 from typing import Dict
@@ -15,7 +16,7 @@ def create_chat() -> None:
     chat_id = str(uuid.uuid4())
     num_chats = len(st.session_state["chats"])
     st.session_state["chats"][chat_id] = {
-        "title": f"Новый чат {num_chats + 1 if num_chats > 0 else ''}",
+        "title": f"Новый чат {num_chats if num_chats > 0 else ''}",
         "messages": []
     }
     st.session_state["current_chat_id"] = chat_id  # Switch to the new chat
@@ -71,3 +72,18 @@ def handle_input(content: str,
             return {"role": "assistant",
                     "content": f"Ошибка: {error_message}"}
 
+def display_text_incrementally(container, text, delay=0.2):
+    """
+    Display text incrementally in the Streamlit container.
+    
+    Args:
+        container: The Streamlit container (e.g., st.empty()) to update.
+        text (str): The full text to display incrementally.
+        delay (float): Time in seconds to wait between adding each word.
+    """
+    words = text.split()
+    displayed_text = ""
+    for word in words:
+        displayed_text += word + " "
+        container.markdown(displayed_text)  # Update the container
+        time.sleep(delay)  # Wait before showing the next word
