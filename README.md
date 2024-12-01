@@ -42,4 +42,8 @@
 
 # Демо решения
 
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/fzjcR0PNTic/0.jpg)](https://www.youtube.com/watch?v=fzjcR0PNTic)
+
+[Также демо есть на RuTube](https://rutube.ru/video/7bf6ec76187f60524a52f55b2a1b2225/)
+
 # Разворачивание решения
